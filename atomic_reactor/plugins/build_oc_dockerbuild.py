@@ -46,12 +46,17 @@ class OCDockerbuildPlugin(BuildStepPlugin):
         ], stdout=PIPE, stderr=STDOUT)
 
         self.log.debug('build is submitted, waiting for it to finish')
-        stdout = oc_process.communicate()[0]
+        lines = []
+        with oc_process.stdout:
+            for line in iter(oc_process.stdout.readline, ''):
+                self.log.info(line.strip())
+                lines.append(line)
+        oc_process.wait()
 
         # TODO: Error detection is not working!
-        command_result = wait_for_command(line for line in stdout.splitlines())
+        command_result = wait_for_command(line for line in lines)
 
-        if command_result.is_failed():
+        if oc_process.returncode != 0:
             raise RuntimeError('Image not built!')
 
         if self.export_image:
